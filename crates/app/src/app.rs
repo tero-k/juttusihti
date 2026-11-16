@@ -2377,6 +2377,11 @@ impl ReadScope {
     }
 }
 
+/// Scrolls the article list back to its top, where the newest articles are.
+fn list_to_top<T>() -> Task<T> {
+    operation::snap_to(LIST_ID, operation::RelativeOffset::START)
+}
+
 #[cfg(test)]
 mod tests {
     use juttusihti_core::categories::{CategoryId, Favourite, GroupId};
@@ -3728,9 +3733,4 @@ mod tests {
         let _ = app.update(Message::GoPlace(Place::News));
         assert_eq!(app.list_filter().feed_id, Some(feed));
     }
-}
-
-/// Scrolls the article list back to its top, where the newest articles are.
-fn list_to_top<T>() -> Task<T> {
-    operation::snap_to(LIST_ID, operation::RelativeOffset::START)
 }
