@@ -9,6 +9,13 @@ The release workflow copies the section for a tag into the GitHub Release notes,
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-11-16
+
+### Changed
+
+- **Article list starts at the top.** Opening another category, feed or group now shows the
+  top of its list, where the newest articles are, instead of keeping the old scroll position.
+
 ## [0.7.7] - 2026-11-16
 
 ### Fixed
@@ -393,7 +400,8 @@ for Windows and Linux.
 - FTS5 has no Finnish stemmer: search inflected words with a prefix, such as
   `työttömyysturva*`.
 
-[Unreleased]: https://github.com/tero-k/juttusihti/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/tero-k/juttusihti/compare/v0.7.8...HEAD
+[0.7.8]: https://github.com/tero-k/juttusihti/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/tero-k/juttusihti/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/tero-k/juttusihti/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/tero-k/juttusihti/compare/v0.7.1...v0.7.5
