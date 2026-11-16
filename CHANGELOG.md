@@ -9,6 +9,13 @@ The release workflow copies the section for a tag into the GitHub Release notes,
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-11-16
+
+### Fixed
+
+- **Suggest categories with Claude.** Claude's answers could be cut off, so no suggestions came
+  back. The app now limits Claude's thinking the same way it already did for OpenAI.
+
 ## [0.7.6] - 2026-11-15
 
 ### Added
@@ -386,7 +393,8 @@ for Windows and Linux.
 - FTS5 has no Finnish stemmer: search inflected words with a prefix, such as
   `työttömyysturva*`.
 
-[Unreleased]: https://github.com/tero-k/juttusihti/compare/v0.7.6...HEAD
+[Unreleased]: https://github.com/tero-k/juttusihti/compare/v0.7.7...HEAD
+[0.7.7]: https://github.com/tero-k/juttusihti/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/tero-k/juttusihti/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/tero-k/juttusihti/compare/v0.7.1...v0.7.5
 [0.7.1]: https://github.com/tero-k/juttusihti/compare/v0.7.0...v0.7.1
