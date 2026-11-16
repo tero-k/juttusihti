@@ -66,12 +66,41 @@ pub fn completion(e: &Endpoint, req: &Request) -> (String, Value) {
     if let Some(search) = req.web_search {
         add_search(e, &mut body, search);
     }
-    if e.provider == Provider::Openai
-        && let Some(effort) = req.reasoning_effort
-    {
-        body["reasoning"] = json!({"effort": effort});
+    if let Some(effort) = req.reasoning_effort {
+        match e.provider {
+            Provider::Openai => body["reasoning"] = json!({"effort": effort}),
+            // Claude thinks by default and the thinking counts toward
+            // max_tokens, so without this small caps truncate the answer.
+            Provider::Anthropic => body["output_config"]["effort"] = json!(effort),
+            Provider::Gemini => {}
+        }
     }
     (url, body)
+}
+
+/// Removes the effort setting from a built request body, for models that
+/// reject it.
+pub fn strip_effort(body: &mut Value) {
+    if let Some(o) = body.as_object_mut() {
+        o.remove("reasoning");
+    }
+    remove_config_key(body, "effort");
+}
+
+/// Removes one key from `output_config`, and the object itself once empty.
+fn remove_config_key(body: &mut Value, key: &str) {
+    let Some(o) = body.as_object_mut() else { return };
+    if let Some(c) = o.get_mut("output_config").and_then(Value::as_object_mut) {
+        c.remove(key);
+        if c.is_empty() {
+            o.remove("output_config");
+        }
+    }
+}
+
+/// True when a built request body carries an effort setting.
+pub fn has_effort(body: &Value) -> bool {
+    body.get("reasoning").is_some() || body["output_config"].get("effort").is_some()
 }
 
 /// Adds the provider's web search tool fields to a request body.
@@ -82,9 +111,7 @@ fn add_search(e: &Endpoint, body: &mut Value, search: WebSearch) {
         Provider::Anthropic => {
             body["tools"] = json!([{"type": "web_search_20250305", "name": "web_search", "max_uses": max_uses}]);
             // Search citations cannot be combined with structured outputs.
-            if let Some(o) = body.as_object_mut() {
-                o.remove("output_config");
-            }
+            remove_config_key(body, "format");
         }
         Provider::Openai => {
             body["tools"] = if search.low_context {
@@ -506,6 +533,28 @@ mod tests {
         }
     }
 
+    #[test]
+    fn effort_reaches_claude_and_openai() {
+        let mut r = req();
+        r.reasoning_effort = Some("low");
+        let (_, mut b) = completion(&ep(Provider::Anthropic), &r);
+        assert_eq!(b["output_config"]["effort"], "low");
+        assert_eq!(b["output_config"]["format"]["type"], "json_schema");
+        assert!(has_effort(&b));
+        strip_effort(&mut b);
+        assert!(!has_effort(&b));
+        assert_eq!(b["output_config"]["format"]["type"], "json_schema");
+
+        let (_, mut b) = completion(&ep(Provider::Openai), &r);
+        assert_eq!(b["reasoning"]["effort"], "low");
+        strip_effort(&mut b);
+        assert!(b.get("reasoning").is_none() && b.get("output_config").is_none());
+
+        r.web_search = Some(WebSearch { max_uses: 1, low_context: false });
+        let (_, b) = completion(&ep(Provider::Anthropic), &r);
+        assert_eq!(b["output_config"], json!({"effort": "low"}));
+    }
+
     fn ep(p: Provider) -> Endpoint {
         Endpoint { provider: p, base_url: "http://x/".into(), auth: Auth::ApiKey("k".into()) }
     }
@@ -516,6 +565,7 @@ mod tests {
         assert_eq!(url, "http://x/v1/messages");
         assert_eq!(b["max_tokens"], 100);
         assert_eq!(b["output_config"]["format"]["type"], "json_schema");
+        assert!(b["output_config"].get("effort").is_none());
         assert!(b.get("temperature").is_none(), "sampling params are removed in 2026-10-21");
 
         let (url, b) = completion(&ep(Provider::Openai), &req());
