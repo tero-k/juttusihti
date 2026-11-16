@@ -297,21 +297,20 @@ impl Client {
         }
         use std::sync::atomic::Ordering;
         let (url, mut body) = providers::completion(&self.endpoint, req);
-        if self.no_reasoning_effort.load(Ordering::Relaxed)
-            && let Some(o) = body.as_object_mut()
-        {
-            o.remove("reasoning");
+        if self.no_reasoning_effort.load(Ordering::Relaxed) {
+            providers::strip_effort(&mut body);
         }
         let json = match self.post_with_retries(&url, &body, None).await {
             // Not every model accepts every effort level; a rejected request is not billed.
             Err(AiError::Status { status: 400, message })
-                if body.get("reasoning").is_some() && message.to_ascii_lowercase().contains("reasoning") =>
+                if providers::has_effort(&body) && {
+                    let m = message.to_ascii_lowercase();
+                    m.contains("reasoning") || m.contains("effort")
+                } =>
             {
                 tracing::info!(model = %req.model, %message, "model rejected the reasoning effort; retrying without it");
                 self.no_reasoning_effort.store(true, Ordering::Relaxed);
-                if let Some(o) = body.as_object_mut() {
-                    o.remove("reasoning");
-                }
+                providers::strip_effort(&mut body);
                 self.post_with_retries(&url, &body, None).await?
             }
             other => other?,
