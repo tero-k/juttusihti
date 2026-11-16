@@ -31,6 +31,8 @@ use crate::{feeds_menu, format, full_article, rail};
 const PAGE_SIZE: u32 = 50;
 const MAX_PARALLEL_FETCHES: usize = 4;
 const SEARCH_ID: &str = "search";
+/// The article list's scrollable, so a new category or feed scope can start at the top.
+const LIST_ID: &str = "article-list";
 /// Fixed heights, so the feeds dropdown can be anchored under its button.
 const TOP_BAR_HEIGHT: f32 = 52.0;
 const LIST_HEADER_HEIGHT: f32 = 44.0;
@@ -914,7 +916,7 @@ impl App {
                 self.category = s;
                 self.page = Page::first(PAGE_SIZE);
                 self.screen = Screen::Reader;
-                self.load_list()
+                self.load_list().chain(list_to_top())
             }
             // The open article's categories and the list's members may have changed.
             Some(category_sidebar::Event::Categorized) => self.load_list(),
@@ -960,7 +962,7 @@ impl App {
                 self.close_feeds_menu();
                 self.place = Place::News;
                 self.scope = scope;
-                self.show_list()
+                self.show_list().chain(list_to_top())
             }
             Message::SetUnreadOnly(unread) => {
                 if self.place != Place::News || unread == self.unread_only {
@@ -1919,7 +1921,7 @@ impl App {
         header = header.push(Space::new().width(Fill)).push(self.view_quick_button()).push(more);
         column![container(header).padding([0.0, LIST_HEADER_PAD]).center_y(LIST_HEADER_HEIGHT)]
             .push(rule::horizontal(1))
-            .push(scrollable(list).height(Fill))
+            .push(scrollable(list).id(LIST_ID).height(Fill))
             .push(rule::horizontal(1))
             .push(self.view_list_footer())
             .into()
@@ -3726,4 +3728,9 @@ mod tests {
         let _ = app.update(Message::GoPlace(Place::News));
         assert_eq!(app.list_filter().feed_id, Some(feed));
     }
+}
+
+/// Scrolls the article list back to its top, where the newest articles are.
+fn list_to_top<T>() -> Task<T> {
+    operation::snap_to(LIST_ID, operation::RelativeOffset::START)
 }
